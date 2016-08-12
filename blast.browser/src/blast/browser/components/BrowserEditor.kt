@@ -1,5 +1,6 @@
 package blast.browser.components
 
+import blast.browser.utils.inSwingThread
 import com.intellij.codeHighlighting.BackgroundEditorHighlighter
 import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.project.Project
@@ -9,6 +10,7 @@ import com.intellij.ui.components.JBTextField
 import com.teamdev.jxbrowser.chromium.Browser
 import com.teamdev.jxbrowser.chromium.BrowserPreferences
 import com.teamdev.jxbrowser.chromium.LoggerProvider
+import com.teamdev.jxbrowser.chromium.events.*
 import com.teamdev.jxbrowser.chromium.swing.BrowserView
 import javafx.application.Platform
 import javafx.embed.swing.JFXPanel
@@ -95,6 +97,7 @@ class JfxBrowserEditor(val urlNode: URLVFNode) : BaseBrowserEditor() {
     }
 }
 
+
 class JxBrowserEditor(urlNode: URLVFNode) : BaseBrowserEditor() {
     private val root = JPanel(GridBagLayout(),true)
     private val textField = JBTextField()
@@ -104,9 +107,33 @@ class JxBrowserEditor(urlNode: URLVFNode) : BaseBrowserEditor() {
     private val browserView = BrowserView(browser)
 
     init {
+        createComponent()
+
+        textField.text = urlNode.targetUrl.toString()
+
+        textField.addActionListener { e -> browser.loadURL(e.actionCommand.toString()) }
+        backButton.addActionListener { if(browser.canGoBack()) browser.goBack() }
+        forwardButton.addActionListener { if(browser.canGoForward()) browser.goForward() }
+
+        browser.addLoadListener( object: LoadListener {
+            override fun onDocumentLoadedInMainFrame(p0: LoadEvent?) { }
+            override fun onFailLoadingFrame(p0: FailLoadingEvent?) { }
+            override fun onStartLoadingFrame(p0: StartLoadingEvent?) { }
+            override fun onProvisionalLoadingFrame(p0: ProvisionalLoadingEvent?) { }
+            override fun onFinishLoadingFrame(p0: FinishLoadingEvent?) { }
+
+            override fun onDocumentLoadedInFrame(frameLoadEvent: FrameLoadEvent) = frameLoadEvent.inSwingThread {
+                textField.text = it.browser.url
+            }
+        })
+
+        browser.loadURL(urlNode.targetUrl.toString())
+    }
+
+    private fun createComponent() {
         val c = GridBagConstraints()
         c.fill = GridBagConstraints.HORIZONTAL
-        c.weightx=1.0
+        c.weightx = 1.0
         c.gridx = 0
         c.gridy = 0
         root.add(textField, c)
@@ -115,30 +142,22 @@ class JxBrowserEditor(urlNode: URLVFNode) : BaseBrowserEditor() {
         c.weightx = 0.0
         c.gridx = 1
         c.gridy = 0
-        root.add(backButton,c)
+        root.add(backButton, c)
 
         c.fill = GridBagConstraints.NONE
         c.weightx = 0.0
         c.gridx = 2
         c.gridy = 0
-        root.add(forwardButton,c)
+        root.add(forwardButton, c)
 
         c.fill = GridBagConstraints.BOTH
         c.gridx = 0
-        c.gridy = c.gridy +1
+        c.gridy = c.gridy + 1
         c.weightx = 1.0
         c.weighty = 1.0
         c.gridwidth = 3
         c.ipady
         root.add(browserView, c)
-
-        textField.text = urlNode.targetUrl.toString()
-
-        textField.addActionListener { e -> browser.loadURL(e.actionCommand.toString()) }
-        backButton.addActionListener { if(browser.canGoBack()) browser.goBack() }
-        forwardButton.addActionListener { if(browser.canGoForward()) browser.goForward() }
-
-        browser.loadURL(urlNode.targetUrl.toString())
     }
 
     override fun getComponent(): JComponent = root

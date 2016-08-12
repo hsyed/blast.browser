@@ -1,38 +1,48 @@
 <idea-plugin version="2">
-  <id>blast.browser</id>
-  <name>blast.browser</name>
-  <version>1.0</version>
-  <vendor email="" url="https://github.com/hsyed/blast.browser.git">Open Source</vendor>
+    <id>blast.browser</id>
+    <name>blast.browser</name>
+    <version>1.0</version>
+    <vendor email="" url="https://github.com/hsyed/blast.browser.git">Open Source</vendor>
 
-  <description><![CDATA[
+    <description><![CDATA[
       Embedded Chromium browser in the IDE.
     ]]></description>
 
-  <change-notes><![CDATA[
+    <change-notes><![CDATA[
     ]]>
-  </change-notes>
+    </change-notes>
 
-  <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-  <idea-version since-build="162.0"/>
+    <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
+    <idea-version since-build="162.0"/>
 
-  <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
-       on how to target different products -->
-  <!-- uncomment to enable plugin in all products
-  <depends>com.intellij.modules.lang</depends>
-  -->
+    <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <!-- uncomment to enable plugin in all products
+    <depends>com.intellij.modules.lang</depends>
+    -->
 
-  <extensions defaultExtensionNs="com.intellij">
-    <fileEditorProvider implementation="blast.browser.components.BrowserEditorProvider"/>
-    <projectService serviceInterface="blast.browser.components.BookmarkManagerImpl"
-                    serviceImplementation="blast.browser.components.BookmarkManagerImpl"/>
+    <!--<project-components>-->
+    <!--<component>-->
+    <!--<interface-class>blast.browser.components.ProjectBookmarkModel</interface-class>-->
+    <!--<implementation-class>blast.browser.components.BookmarkTreeViewPanel</implementation-class>-->
+    <!--</component>-->
+    <!--</project-components>-->
 
-    <toolWindow id="Bookmarks" anchor="left" secondary="true"
-                factoryClass="blast.browser.components.BookmarkTreeViewToolWindow"/>
-  </extensions>
+    <extensions defaultExtensionNs="com.intellij">
+        <fileEditorProvider implementation="blast.browser.components.BrowserEditorProvider"/>
+        <projectService serviceInterface="blast.browser.components.BookmarkManagerImpl"
+                        serviceImplementation="blast.browser.components.BookmarkManagerImpl"/>
+
+        <toolWindow id="Bookmarks" anchor="left" secondary="true" icon="AllIcons.Xml.Browsers.Chromium16"
+                    factoryClass="blast.browser.components.BookmarkTreeViewToolWindow"/>
+    </extensions>
 
 
-  <actions>
-    <!-- Add your actions here -->
-  </actions>
+    <actions>
+        <action id="AddNewBrowserBookmark" text="bookmark" icon="AllIcons.General.Web"
+                class="blast.browser.components.AddBMAction"/>
+        <!--<action id="AddNewBrowserBookmarkDirectory" text="directory" icon="AllIcons.Nodes.Folder"-->
+                <!--class="blast.browser.components.AddBMDAction"/>-->
+    </actions>
 
 </idea-plugin>
