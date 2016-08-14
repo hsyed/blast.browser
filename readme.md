@@ -1,3 +1,6 @@
+[![Screen Shot 2016-08-14 at 18.12.57.png](https://s3.postimg.org/58lol9g3n/Screen_Shot_2016_08_14_at_18_12_57.png)](https://postimg.org/image/8fg84w0jj/)
+
+
 # Overview 
 This plugin enables opening embedded chromium browsers inside intelij. It uses 
 [JxBrowser](https://www.teamdev.com/jxbrowser). It is developed for the mac but you should be able to create a build 
