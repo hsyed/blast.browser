@@ -30,6 +30,8 @@ import java.awt.BorderLayout
 import java.awt.Image
 import java.awt.event.ContainerEvent
 import java.awt.event.ContainerListener
+import java.awt.event.MouseEvent
+import java.awt.event.MouseListener
 import java.net.URL
 import javax.swing.*
 import javax.swing.event.TreeExpansionEvent
@@ -151,6 +153,8 @@ class BookmarkTreeViewPanel(
                 treeBuilder.select(parent)
             }
         })
+
+
     }
 
 

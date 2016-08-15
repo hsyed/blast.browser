@@ -1,3 +1,8 @@
-.idea
-blast.browser/lib
-out
+# Created by .ignore support plugin (hsz.mobi)
+.DS_Store
+.gitignore
+.gradle/
+.idea/
+blast.browser/classes/
+blast.browser/lib/
+out/

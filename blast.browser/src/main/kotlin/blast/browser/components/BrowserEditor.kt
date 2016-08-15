@@ -2,6 +2,7 @@ package blast.browser.components
 
 import blast.browser.utils.inSwingThread
 import com.intellij.codeHighlighting.BackgroundEditorHighlighter
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
@@ -23,6 +24,7 @@ import java.util.logging.Level
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 
 abstract class BaseBrowserEditor : UserDataHolderBase(), FileEditor {
     override fun dispose() {
@@ -99,28 +101,39 @@ class JfxBrowserEditor(val urlNode: URLVFNode) : BaseBrowserEditor() {
 
 
 class JxBrowserEditor(urlNode: URLVFNode) : BaseBrowserEditor() {
-    private val root = JPanel(GridBagLayout(),true)
+    private val root = JPanel(GridBagLayout(), true)
     private val textField = JBTextField()
     private val backButton = JButton("<-")
     private val forwardButton = JButton("->")
-    private val browser = Browser()
-    private val browserView = BrowserView(browser)
+    private val browser: Browser
+    private val browserView: BrowserView
 
     init {
+        browser = JxBrowserManager.initializeJxBrowser()
+        browserView = BrowserView(browser)
         createComponent()
 
         textField.text = urlNode.targetUrl.toString()
 
         textField.addActionListener { e -> browser.loadURL(e.actionCommand.toString()) }
-        backButton.addActionListener { if(browser.canGoBack()) browser.goBack() }
-        forwardButton.addActionListener { if(browser.canGoForward()) browser.goForward() }
+        backButton.addActionListener { if (browser.canGoBack()) browser.goBack() }
+        forwardButton.addActionListener { if (browser.canGoForward()) browser.goForward() }
 
-        browser.addLoadListener( object: LoadListener {
-            override fun onDocumentLoadedInMainFrame(p0: LoadEvent?) { }
-            override fun onFailLoadingFrame(p0: FailLoadingEvent?) { }
-            override fun onStartLoadingFrame(p0: StartLoadingEvent?) { }
-            override fun onProvisionalLoadingFrame(p0: ProvisionalLoadingEvent?) { }
-            override fun onFinishLoadingFrame(p0: FinishLoadingEvent?) { }
+        browser.addLoadListener(object : LoadListener {
+            override fun onDocumentLoadedInMainFrame(p0: LoadEvent?) {
+            }
+
+            override fun onFailLoadingFrame(p0: FailLoadingEvent?) {
+            }
+
+            override fun onStartLoadingFrame(p0: StartLoadingEvent?) {
+            }
+
+            override fun onProvisionalLoadingFrame(p0: ProvisionalLoadingEvent?) {
+            }
+
+            override fun onFinishLoadingFrame(p0: FinishLoadingEvent?) {
+            }
 
             override fun onDocumentLoadedInFrame(frameLoadEvent: FrameLoadEvent) = frameLoadEvent.inSwingThread {
                 textField.text = it.browser.url
@@ -168,13 +181,19 @@ class BrowserEditorProvider : FileEditorProvider {
     init {
         // todo move to a component initializer
         LoggerProvider.setLevel(Level.OFF);
-
         BrowserPreferences.setChromiumSwitches("--overscroll-history-navigation=1");
     }
+
     override fun getEditorTypeId(): String = "blast.browser.editor"
-    override fun createEditor(project: Project, vf: VirtualFile): FileEditor = JxBrowserEditor((vf as URLVFNode))
+    override fun createEditor(project: Project, vf: VirtualFile): FileEditor {
+
+        JxBrowserManager.ensurePlatformJarDownloaded(project, null)
+        return JxBrowserEditor((vf as URLVFNode))
+    }
+
     override fun accept(project: Project, file: VirtualFile): Boolean = file is URLVFNode
     override fun getPolicy() = FileEditorPolicy.HIDE_DEFAULT_EDITOR
+
 }
 
 
