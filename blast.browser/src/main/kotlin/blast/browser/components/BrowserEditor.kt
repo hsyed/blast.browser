@@ -137,6 +137,7 @@ class JxBrowserEditor(urlNode: URLVFNode) : BaseBrowserEditor() {
 
             override fun onDocumentLoadedInFrame(frameLoadEvent: FrameLoadEvent) = frameLoadEvent.inSwingThread {
                 textField.text = it.browser.url
+                root.requestFocus()
             }
         })
 
@@ -174,7 +175,7 @@ class JxBrowserEditor(urlNode: URLVFNode) : BaseBrowserEditor() {
     }
 
     override fun getComponent(): JComponent = root
-    override fun getPreferredFocusedComponent(): JComponent = textField
+    override fun getPreferredFocusedComponent(): JComponent = root
 }
 
 class BrowserEditorProvider : FileEditorProvider {
