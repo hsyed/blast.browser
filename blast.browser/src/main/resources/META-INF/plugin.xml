@@ -35,6 +35,8 @@
 
         <toolWindow id="Bookmarks" anchor="left" secondary="true" icon="AllIcons.Xml.Browsers.Chromium16"
                     factoryClass="blast.browser.components.BookmarkTreeViewToolWindow"/>
+
+        <fileIconProvider implementation="blast.browser.components.Monkey" order="first"/>
     </extensions>
 
 

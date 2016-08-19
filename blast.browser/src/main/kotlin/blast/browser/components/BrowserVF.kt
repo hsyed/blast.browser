@@ -70,7 +70,7 @@ abstract class NonFileVirtualFile(protected val filesystem_: VirtualFileSystem) 
     override fun getInputStream() = throw UnsupportedOperationException()
     override fun getOutputStream(p0: Any?, p1: Long, p2: Long) = throw UnsupportedOperationException()
 
-    override fun isWritable(): Boolean = false
+    override fun isWritable(): Boolean = true
     override fun isValid(): Boolean = true
 
     override fun refresh(p0: Boolean, p1: Boolean, p2: Runnable?) { }
@@ -106,6 +106,12 @@ abstract class BaseVFDirectoryNode(parent_: String,
 }
 
 class URLVFNode(val targetUrl: URL, filesystem_: VirtualFileSystem): NonFileVirtualFile(filesystem_) {
+    private var name_: String = targetUrl.toString()
+
+    fun setName(name_: String ){
+        this.name_ = name_
+    }
+
     override fun getPath(): String {
         return targetUrl.toString()
     }
@@ -114,8 +120,9 @@ class URLVFNode(val targetUrl: URL, filesystem_: VirtualFileSystem): NonFileVirt
         return false
     }
 
+
     override fun getName(): String {
-        return targetUrl.toString()
+        return name_
     }
 
     override fun getParent(): VirtualFile? = null

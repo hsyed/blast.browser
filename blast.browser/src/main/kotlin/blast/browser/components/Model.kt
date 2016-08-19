@@ -22,6 +22,7 @@ import kotlin.comparisons.compareValuesBy
 object BlastBrowser {
     object DataKeys {
         val TARGET_TREE = DataKey.create<Tree>("targetBookmarkTree")
+        val BROWSER_EDITOR = DataKey.create<BaseBrowserEditor>("sourceBrowserEditor")
     }
 }
 

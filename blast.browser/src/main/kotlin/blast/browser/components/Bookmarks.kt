@@ -1,6 +1,9 @@
 package blast.browser.components
 
 import blast.browser.utils.actionButton
+import com.intellij.icons.AllIcons
+import com.intellij.ide.FileIconProvider
+import com.intellij.ide.IconProvider
 import com.intellij.ide.dnd.aware.DnDAwareTree
 import com.intellij.ide.util.treeView.AbstractTreeBuilder
 import com.intellij.ide.util.treeView.AbstractTreeStructure
@@ -10,10 +13,12 @@ import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.ex.dummy.DummyFileSystem
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.pom.Navigatable
+import com.intellij.psi.PsiElement
 import com.intellij.ui.*
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.awt.RelativeRectangle
@@ -250,6 +255,12 @@ class BookmarkTreeViewToolWindow : ToolWindowFactory {
     }
 }
 
+class Monkey: FileIconProvider {
+    override fun getIcon(file: VirtualFile, flags: Int, project: Project?): Icon? {
+        if ((file as? URLVFNode) != null) return AllIcons.General.Web
+        else return null
+    }
+}
 
 
 
