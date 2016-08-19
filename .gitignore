@@ -4,5 +4,5 @@
 .gradle/
 .idea/
 blast.browser/classes/
-blast.browser/lib/
+/lib/
 out/
