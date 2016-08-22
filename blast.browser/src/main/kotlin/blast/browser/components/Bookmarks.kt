@@ -3,7 +3,6 @@ package blast.browser.components
 import blast.browser.utils.actionButton
 import com.intellij.icons.AllIcons
 import com.intellij.ide.FileIconProvider
-import com.intellij.ide.IconProvider
 import com.intellij.ide.dnd.aware.DnDAwareTree
 import com.intellij.ide.util.treeView.AbstractTreeBuilder
 import com.intellij.ide.util.treeView.AbstractTreeStructure
@@ -14,12 +13,13 @@ import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.ex.dummy.DummyFileSystem
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.pom.Navigatable
-import com.intellij.psi.PsiElement
-import com.intellij.ui.*
+import com.intellij.ui.CommonActionsPanel
+import com.intellij.ui.IdeBorderFactory
+import com.intellij.ui.ToolbarDecorator
+import com.intellij.ui.TreeSpeedSearch
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.awt.RelativeRectangle
 import com.intellij.ui.content.ContentFactory
@@ -33,14 +33,8 @@ import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.tree.TreeUtil
 import java.awt.BorderLayout
 import java.awt.Image
-import java.awt.event.ContainerEvent
-import java.awt.event.ContainerListener
-import java.awt.event.MouseEvent
-import java.awt.event.MouseListener
 import java.net.URL
 import javax.swing.*
-import javax.swing.event.TreeExpansionEvent
-import javax.swing.event.TreeExpansionListener
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
@@ -53,10 +47,11 @@ class BookmarkTreeBuilder(jtree: JTree,
     }
 }
 
-class BrowserOpener(bookmark: Bookmark, private val project: Project) : Navigatable {
-    private val vf: URLVFNode = URLVFNode(URL(bookmark.url), DummyFileSystem())
+class BrowserOpener(private val url: String, private val project: Project) : Navigatable {
     override fun navigate(requestFocus: Boolean) {
-        FileEditorManager.getInstance(project).openFile(vf, false)
+        val manager = FileEditorManager.getInstance(project)
+        val vf: URLVFNode = URLVFNode(URL(url), BrowserStorageVirtualFilesystem.instance)
+        manager.openFile(vf, true)
     }
 
     override fun canNavigate(): Boolean = true
@@ -229,7 +224,7 @@ class BookmarkTreeViewPanel(
                 if (res.size == 1) {
                     val tp: TreePath = res[0]
                     val uo = (tp.lastPathComponent as DefaultMutableTreeNode).userObject
-                    when (uo) { is Bookmark -> return BrowserOpener(uo, project)
+                    when (uo) { is Bookmark -> return BrowserOpener(uo.url, project)
                     }
                 }
             }

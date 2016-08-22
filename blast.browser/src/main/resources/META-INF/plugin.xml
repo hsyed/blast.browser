@@ -29,6 +29,7 @@
     <!--</project-components>-->
 
     <extensions defaultExtensionNs="com.intellij">
+        <virtualFileSystem key="browserfs" implementationClass="blast.browser.components.BrowserStorageVirtualFilesystem"/>
         <fileEditorProvider implementation="blast.browser.components.BrowserEditorProvider"/>
         <projectService serviceInterface="blast.browser.components.BookmarkManagerImpl"
                         serviceImplementation="blast.browser.components.BookmarkManagerImpl"/>

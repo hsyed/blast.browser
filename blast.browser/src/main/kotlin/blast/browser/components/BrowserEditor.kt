@@ -5,6 +5,7 @@ import com.intellij.codeHighlighting.BackgroundEditorHighlighter
 import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
@@ -235,7 +236,7 @@ class BrowserEditorState(val url: String): FileEditorState {
     }
 }
 
-class BrowserEditorProvider : FileEditorProvider {
+class BrowserEditorProvider : FileEditorProvider, DumbAware {
     init {
         // todo move to a component initializer
         LoggerProvider.setLevel(Level.OFF);
