@@ -56,7 +56,6 @@ class BrowserStorageVirtualFilesystem : VirtualFileSystem() {
     }
 }
 
-
 abstract class NonFileVirtualFile(protected val filesystem_: VirtualFileSystem) : VirtualFile() {
     companion object {
         protected val emptyByteArray_ = ByteArray(0)

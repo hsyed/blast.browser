@@ -11,10 +11,10 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.components.JBTextField
 import com.teamdev.jxbrowser.chromium.Browser
-import com.teamdev.jxbrowser.chromium.BrowserPreferences
 import com.teamdev.jxbrowser.chromium.BrowserType
 import com.teamdev.jxbrowser.chromium.LoggerProvider
-import com.teamdev.jxbrowser.chromium.events.*
+import com.teamdev.jxbrowser.chromium.events.LoadAdapter
+import com.teamdev.jxbrowser.chromium.events.LoadEvent
 import com.teamdev.jxbrowser.chromium.swing.BrowserView
 import org.jdom.Element
 import java.awt.GridBagConstraints
@@ -31,9 +31,6 @@ abstract class BaseBrowserEditor : UserDataHolderBase(), FileEditor, DataProvide
 
     override fun isValid(): Boolean {
         return true
-    }
-
-    override fun deselectNotify() {
     }
 
     override fun getCurrentLocation(): FileEditorLocation {
@@ -76,32 +73,36 @@ class JxBrowserEditor(val project: Project, val urlNode: URLVirtualFileNode) : B
         backButton.addActionListener { if (browser.canGoBack()) browser.goBack() }
         forwardButton.addActionListener { if (browser.canGoForward()) browser.goForward() }
 
-        browser.addLoadListener(object : LoadAdapter() {
-            override fun onDocumentLoadedInMainFrame(p0: LoadEvent) {
-                urlNode.name = (p0.browser.title)
+        browser.addTitleListener {
+            if (!urlNode.name.equals(it.title)) {
+                urlNode.name = it.title
                 fileManagerEx.updateFilePresentation(urlNode)
 
-                // update the VirtualFile so that splits from this editor point to the same browser.
-                urlNode.targetUrl = p0.browser.url!!
+            }
+        }
 
-                p0.inSwingThread {
+        browser.addLoadListener(object : LoadAdapter() {
+            override fun onDocumentLoadedInMainFrame(loadEvent: LoadEvent) {
+                // update the VirtualFile so that splits from this editor point to the same browser.
+                urlNode.targetUrl = loadEvent.browser.url!!
+
+                loadEvent.inSwingThread {
                     textField.text = it.browser.url
                 }
             }
         })
     }
 
+    override fun deselectNotify() {
+    }
+
     override fun selectNotify() {
         if (FileEditorManagerEx.getInstanceEx(project).selectedEditors.find { it == this } != null) {
-            if (!browser.isLoading)
-                if (browser.url != urlNode.targetUrl)
-                    browser.loadURL(urlNode.targetUrl)
+            if (!browser.isLoading && !browser.url.equals(urlNode.targetUrl)) browser.loadURL(urlNode.targetUrl)
         }
     }
 
-    override fun dispose() {
-        browser.dispose()
-    }
+    override fun dispose() = browser.dispose()
 
     override fun setState(state: FileEditorState) {
         val st = (state as BrowserEditorState)
@@ -167,7 +168,7 @@ class BrowserEditorState(val title: String, val url: String) : FileEditorState {
 class BrowserEditorProvider : FileEditorProvider, DumbAware {
     init {
         // todo move to a component initializer
-        LoggerProvider.getBrowserLogger().setLevel(Level.INFO);
+        LoggerProvider.getBrowserLogger().setLevel(Level.WARNING);
         LoggerProvider.getIPCLogger().setLevel(Level.SEVERE);
         LoggerProvider.getChromiumProcessLogger().setLevel(Level.SEVERE);
 //        BrowserPreferences.setChromiumSwitches("--overscroll-history-navigation=1");
