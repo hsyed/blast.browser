@@ -4,7 +4,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileListener
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.VirtualFileSystem
-import java.net.URL
 
 class BrowserStorageVirtualFilesystem : VirtualFileSystem() {
     companion object {
@@ -14,7 +13,7 @@ class BrowserStorageVirtualFilesystem : VirtualFileSystem() {
 
     override fun getProtocol(): String = BrowserStorageVirtualFilesystem.protocol
 
-    override fun findFileByPath(path: String): VirtualFile = URLVFNode(URL(path), this)
+    override fun findFileByPath(path: String): VirtualFile = URLVirtualFileNode("", path, this)
 
     override fun refreshAndFindFileByPath(p0: String): VirtualFile = findFileByPath(p0)
 
@@ -46,9 +45,7 @@ class BrowserStorageVirtualFilesystem : VirtualFileSystem() {
         throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun isReadOnly(): Boolean {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    override fun isReadOnly(): Boolean = true
 
     override fun removeVirtualFileListener(p0: VirtualFileListener) {
         throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
@@ -80,34 +77,9 @@ abstract class NonFileVirtualFile(protected val filesystem_: VirtualFileSystem) 
 
     override fun getFileSystem(): VirtualFileSystem = filesystem_
 }
-//
-//abstract class BaseVFNode(protected val parent_: String,
-//                          filesystem_: VirtualFileSystem,
-//                          protected val uuid: UUID = UUID.randomUUID()) : NonFileVirtualFile(filesystem_) {
-//    protected var name_: String? = null
-//
-//    override fun getName(): String = name_!!
-//    override fun getParent() = filesystem_.findFileByPath(parent_)
-//
-//    override fun getPath() = uuid.toString()
-//}
-//
-//abstract class BaseVFFileNode(parent_: String,
-//                              filesystem_: VirtualFileSystem) : BaseVFNode(parent_, filesystem_) {
-//    override fun isDirectory(): Boolean = false
-//    override fun getChildren() = emptyArray<VirtualFile>()
-//}
-//
-//abstract class BaseVFDirectoryNode(parent_: String,
-//                                   filesystem_: VirtualFileSystem) : BaseVFNode(parent_, filesystem_) {
-//    protected var children_: Array<VirtualFile>? = emptyArray()
-//
-//    override fun isDirectory(): Boolean = true
-//    override fun getChildren(): Array<out VirtualFile> = children
-//}
 
-class URLVFNode(val targetUrl: URL, filesystem_: BrowserStorageVirtualFilesystem): NonFileVirtualFile(filesystem_) {
-    private var name_: String = targetUrl.toString()
+class URLVirtualFileNode(friendlyName: String, var targetUrl: String, filesystem_: BrowserStorageVirtualFilesystem): NonFileVirtualFile(filesystem_) {
+    private var name_: String = friendlyName
 
     fun setName(name_: String ){
         this.name_ = name_

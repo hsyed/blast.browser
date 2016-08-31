@@ -9,12 +9,11 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.ui.components.JBTextField
 import com.teamdev.jxbrowser.chromium.Browser
 import com.teamdev.jxbrowser.chromium.BrowserPreferences
+import com.teamdev.jxbrowser.chromium.BrowserType
 import com.teamdev.jxbrowser.chromium.LoggerProvider
-import com.teamdev.jxbrowser.chromium.dom.By
 import com.teamdev.jxbrowser.chromium.events.*
 import com.teamdev.jxbrowser.chromium.swing.BrowserView
 import org.jdom.Element
@@ -25,78 +24,39 @@ import java.util.logging.Level
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 
 abstract class BaseBrowserEditor : UserDataHolderBase(), FileEditor, DataProvider {
-    override fun dispose() {
-        println("unimplemented dispose")
-    }
-
-    override fun getName(): String {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun deselectNotify() {
-    }
-
     override fun getBackgroundHighlighter(): BackgroundEditorHighlighter? = null
 
     override fun isValid(): Boolean {
-        // TODO update
         return true
     }
 
-    override fun isModified(): Boolean {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-
-    override fun selectNotify() {
-        // TODO
+    override fun deselectNotify() {
     }
 
     override fun getCurrentLocation(): FileEditorLocation {
         throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
+    override fun getName(): String {
+        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+
+    override fun isModified(): Boolean {
+        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     override fun addPropertyChangeListener(p0: PropertyChangeListener) {
-        println("unplemented addPropertyChangeListener")
     }
 
     override fun removePropertyChangeListener(p0: PropertyChangeListener) {
-        println("unimplemented removePropertyChangeListener")
     }
 }
-//
-//class JfxBrowserEditor(val urlNode: URLVFNode) : BaseBrowserEditor() {
-//    private lateinit var browserViewPanel: JFXPanel
-//    private lateinit var webView: WebView
-//    private lateinit var scene: Scene
-//
-//
-//    override fun getComponent(): JComponent {
-//        browserViewPanel = JFXPanel()
-//        Platform.runLater {
-//            webView = WebView()
-//            scene = Scene(webView)
-//
-//            webView.maxWidthProperty().bind(scene.widthProperty())
-//            webView.maxHeightProperty().bind(scene.heightProperty())
-//
-//            browserViewPanel.scene = scene
-//            println(urlNode.targetUrl)
-//            webView.engine.load(urlNode.targetUrl.toString())
-//        }
-//
-//        return browserViewPanel
-//    }
-//
-//    override fun getPreferredFocusedComponent(): JComponent {
-//        return browserViewPanel
-//    }
-//}
 
-
-class JxBrowserEditor(project: Project, urlNode: URLVFNode) : BaseBrowserEditor() {
+class JxBrowserEditor(val project: Project, val urlNode: URLVirtualFileNode) : BaseBrowserEditor() {
     private val root = JPanel(GridBagLayout(), true)
     private val textField = JBTextField()
     private val backButton = JButton("<-")
@@ -106,7 +66,7 @@ class JxBrowserEditor(project: Project, urlNode: URLVFNode) : BaseBrowserEditor(
     private val fileManagerEx = FileEditorManagerEx.getInstanceEx(project)
 
     init {
-        browser = JxBrowserManager.initializeJxBrowser()
+        browser = JxBrowserManager.initializeJxBrowser(BrowserType.LIGHTWEIGHT)
         browserView = BrowserView(browser)
         createComponent()
 
@@ -116,77 +76,45 @@ class JxBrowserEditor(project: Project, urlNode: URLVFNode) : BaseBrowserEditor(
         backButton.addActionListener { if (browser.canGoBack()) browser.goBack() }
         forwardButton.addActionListener { if (browser.canGoForward()) browser.goForward() }
 
-//        browser.context.networkService.resourceHandler = object : ResourceHandler {
-//            override fun canLoadResource(p0: ResourceParams?): Boolean {
-//                if (p0!!.resourceType == ResourceType.FAVICON) println(p0!!.url)
-//                if(p0!!.resourceType == ResourceType.IMAGE && p0.url.contains("favicon")) println("found favicon url: ${p0.url}")
-//                return true
-//            }
-//        }
-
-//        browser.
-
-
-        browser.addLoadListener(object : LoadListener {
+        browser.addLoadListener(object : LoadAdapter() {
             override fun onDocumentLoadedInMainFrame(p0: LoadEvent) {
+                urlNode.name = (p0.browser.title)
+                fileManagerEx.updateFilePresentation(urlNode)
+
+                // update the VirtualFile so that splits from this editor point to the same browser.
+                urlNode.targetUrl = p0.browser.url!!
+
                 p0.inSwingThread {
-//                    println("BQSDEASDADSADA")
-                    val res = it.browser.document.findElements(By.xpath("//link[@rel=\"icon\" or @rel=\"shortcut icon\"]"))
-//                    res.forEach {
-//                        println("----------")
-//                        it.attributes.forEach { println(it.key + " " + it.value) }
-//                    }
                     textField.text = it.browser.url
-                    urlNode.name = (it.browser.title)
-                    fileManagerEx.updateFilePresentation(urlNode)
-//                windowManagerEx
                 }
             }
-
-            override fun onFailLoadingFrame(p0: FailLoadingEvent?) {
-            }
-
-            override fun onStartLoadingFrame(p0: StartLoadingEvent?) {
-            }
-
-            override fun onProvisionalLoadingFrame(p0: ProvisionalLoadingEvent?) {
-
-            }
-
-            override fun onFinishLoadingFrame(p0: FinishLoadingEvent?) {
-//                println("bang")
-            }
-
-            override fun onDocumentLoadedInFrame(frameLoadEvent: FrameLoadEvent) = frameLoadEvent.inSwingThread {
-//  val res = it.browser.document.evaluate()
-//                res.snapshotNodes.forEach { println(it.nodeName) }
-
-//                println(frameLoadEvent.browser.document.documentElement.innerHTML)
-//                val head = frameLoadEvent.browser.document.findElement(By.tagName("head"))
-//                println(head.innerHTML)
-//                val childZero = head.children[0]
-//                val links = childZero.findElement(By.tagName("link"))
-//                val children = links.children
-////                browserView.i
-
-
-//                WindowManagerImpl.getInstanceEx()
-            }
         })
-
-        browser.loadURL(urlNode.targetUrl.toString())
-        IdeFocusManager.getGlobalInstance().requestFocus(browserView,true)
     }
 
-    // when browsers are being restored
+    override fun selectNotify() {
+        if (FileEditorManagerEx.getInstanceEx(project).selectedEditors.find { it == this } != null) {
+            if (!browser.isLoading)
+                if (browser.url != urlNode.targetUrl)
+                    browser.loadURL(urlNode.targetUrl)
+        }
+    }
+
+    override fun dispose() {
+        browser.dispose()
+    }
+
     override fun setState(state: FileEditorState) {
-        browser.loadURL((state as BrowserEditorState).url)
+        val st = (state as BrowserEditorState)
+        SwingUtilities.invokeLater {
+            urlNode.name = st.title
+            fileManagerEx.updateFilePresentation(urlNode)
+        }
     }
 
     // when browsers are being saved
     override fun getState(level: FileEditorStateLevel): FileEditorState {
-        // TODO: dont save if the browser has some sort of erro
-        return BrowserEditorState(browser.url)
+        // TODO: dont save if the browser has some sort of error
+        return BrowserEditorState(urlNode.name, urlNode.url)
     }
 
     override fun getData(dataId: String): Any? {
@@ -230,7 +158,7 @@ class JxBrowserEditor(project: Project, urlNode: URLVFNode) : BaseBrowserEditor(
     override fun getPreferredFocusedComponent(): JComponent = browserView
 }
 
-class BrowserEditorState(val url: String): FileEditorState {
+class BrowserEditorState(val title: String, val url: String) : FileEditorState {
     override fun canBeMergedWith(otherState: FileEditorState?, level: FileEditorStateLevel?): Boolean {
         return false
     }
@@ -239,28 +167,32 @@ class BrowserEditorState(val url: String): FileEditorState {
 class BrowserEditorProvider : FileEditorProvider, DumbAware {
     init {
         // todo move to a component initializer
-        LoggerProvider.setLevel(Level.OFF);
-        BrowserPreferences.setChromiumSwitches("--overscroll-history-navigation=1");
+        LoggerProvider.getBrowserLogger().setLevel(Level.INFO);
+        LoggerProvider.getIPCLogger().setLevel(Level.SEVERE);
+        LoggerProvider.getChromiumProcessLogger().setLevel(Level.SEVERE);
+//        BrowserPreferences.setChromiumSwitches("--overscroll-history-navigation=1");
     }
 
     override fun getEditorTypeId(): String = "blast.browser.editor"
+
     override fun createEditor(project: Project, vf: VirtualFile): FileEditor {
         JxBrowserManager.ensurePlatformJarDownloaded(project, null)
-        return JxBrowserEditor(project, (vf as URLVFNode))
+        return JxBrowserEditor(project, (vf as URLVirtualFileNode))
     }
 
-    override fun accept(project: Project, file: VirtualFile): Boolean = file is URLVFNode
+    override fun accept(project: Project, file: VirtualFile): Boolean = file is URLVirtualFileNode
+
     override fun getPolicy() = FileEditorPolicy.HIDE_DEFAULT_EDITOR
 
     override fun readState(sourceElement: Element, project: Project, file: VirtualFile): FileEditorState {
-        return BrowserEditorState(sourceElement.getAttribute("url").value)
+        return BrowserEditorState(
+                sourceElement.getAttributeValue("title"),
+                sourceElement.getAttributeValue("url"))
     }
 
     override fun writeState(state: FileEditorState, project: Project, targetElement: Element) {
-        targetElement.setAttribute("url", (state as BrowserEditorState).url)
+        val st = (state as BrowserEditorState)
+        targetElement.setAttribute("title", st.title)
+        targetElement.setAttribute("url", st.url)
     }
 }
-
-
-
-

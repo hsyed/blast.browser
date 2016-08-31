@@ -11,6 +11,7 @@ import com.intellij.util.download.DownloadableFileService
 import com.intellij.util.download.DownloadableFileSetDescription
 import com.teamdev.jxbrowser.chromium.Browser
 import com.teamdev.jxbrowser.chromium.BrowserPreferences
+import com.teamdev.jxbrowser.chromium.BrowserType
 import com.teamdev.jxbrowser.chromium.internal.ChromiumExtractor
 import java.io.File
 import java.net.URL
@@ -74,7 +75,7 @@ object JxBrowserManager {
         return true
     }
 
-    fun initializeJxBrowser(): Browser {
+    fun initializeJxBrowser(type: BrowserType): Browser {
         val platformArtefact = "file:$targetFile"
 
         if (ChromiumExtractor.create().shouldExtract(BrowserPreferences.getChromiumDir())) {
@@ -100,7 +101,7 @@ object JxBrowserManager {
             println("JxBrowser is allready initialized")
             logger.debug("JxBrowser is allready initialized")
         }
-        return Browser()
+        return Browser(type)
     }
 
     private fun candidateArtifacts(): Array<File> =

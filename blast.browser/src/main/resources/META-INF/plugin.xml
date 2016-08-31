@@ -21,31 +21,24 @@
     <depends>com.intellij.modules.lang</depends>
     -->
 
-    <!--<project-components>-->
-    <!--<component>-->
-    <!--<interface-class>blast.browser.components.ProjectBookmarkModel</interface-class>-->
-    <!--<implementation-class>blast.browser.components.BookmarkTreeViewPanel</implementation-class>-->
-    <!--</component>-->
-    <!--</project-components>-->
-
     <extensions defaultExtensionNs="com.intellij">
-        <virtualFileSystem key="browserfs" implementationClass="blast.browser.components.BrowserStorageVirtualFilesystem"/>
+        <virtualFileSystem key="browserfs"
+                           implementationClass="blast.browser.components.BrowserStorageVirtualFilesystem"/>
         <fileEditorProvider implementation="blast.browser.components.BrowserEditorProvider"/>
-        <projectService serviceInterface="blast.browser.components.BookmarkManagerImpl"
-                        serviceImplementation="blast.browser.components.BookmarkManagerImpl"/>
+
+        <applicationService serviceInterface="blast.browser.components.BookmarkManagerImpl"
+                            serviceImplementation="blast.browser.components.BookmarkManagerImpl"/>
 
         <toolWindow id="Bookmarks" anchor="left" secondary="true" icon="AllIcons.Xml.Browsers.Chromium16"
                     factoryClass="blast.browser.components.BookmarkTreeViewToolWindow"/>
 
-        <fileIconProvider implementation="blast.browser.components.Monkey" order="first"/>
+        <fileIconProvider implementation="blast.browser.components.BrowserFileIconProvider" order="first"/>
     </extensions>
 
 
     <actions>
         <action id="AddNewBrowserBookmark" text="bookmark" icon="AllIcons.General.Web"
                 class="blast.browser.components.AddBMAction"/>
-        <!--<action id="AddNewBrowserBookmarkDirectory" text="directory" icon="AllIcons.Nodes.Folder"-->
-                <!--class="blast.browser.components.AddBMDAction"/>-->
     </actions>
 
 </idea-plugin>

@@ -5,6 +5,7 @@ import blast.browser.utils.setValue
 import blast.browser.utils.xmlSafeUUID
 import com.intellij.icons.AllIcons
 import com.intellij.ide.projectView.PresentationData
+import com.intellij.ide.util.treeView.NodeDescriptor
 import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.ServiceManager
@@ -34,7 +35,7 @@ interface IDNode : Comparable<BookmarkNode> {
     fun treePath(): TreePath
 }
 
-abstract class BookmarkNode(internal var element: Element) : SimpleNode(), IDNode {
+abstract class BookmarkNode(internal var element: Element, val p: NodeDescriptor<*>? = null) : SimpleNode(), IDNode {
     override val id: String
         get() {
             return element.name
@@ -45,6 +46,8 @@ abstract class BookmarkNode(internal var element: Element) : SimpleNode(), IDNod
     init {
         element.setAttribute("type", this.type())
     }
+
+    override fun getParentDescriptor(): NodeDescriptor<*>? = p
 
     override fun getName(): String = displayName
 
@@ -67,7 +70,7 @@ abstract class BookmarkNode(internal var element: Element) : SimpleNode(), IDNod
     }
 }
 
-class BookmarkDirectory(element: Element) : BookmarkNode(element) {
+class BookmarkDirectory(element: Element, parentDescriptor: NodeDescriptor<*>? = null) : BookmarkNode(element, parentDescriptor) {
     constructor(name: String, id: String) : this(Element(id)) {
         displayName = name
         element.name = id
@@ -79,8 +82,8 @@ class BookmarkDirectory(element: Element) : BookmarkNode(element) {
     override fun getChildren(): Array<out BookmarkNode> = element.getChildren().map {
         val type: String = it.getAttribute("type").value
         when (type) {
-            "directory" -> BookmarkDirectory(it)
-            "bookmark" -> Bookmark(it)
+            "directory" -> BookmarkDirectory(it, this)
+            "bookmark" -> Bookmark(it, this)
             else -> throw Exception("$type not recognised")
         }
     }.toTypedArray()
@@ -88,6 +91,10 @@ class BookmarkDirectory(element: Element) : BookmarkNode(element) {
     override fun update(presentation: PresentationData) {
         super.update(presentation)
         presentation.setIcon(AllIcons.Nodes.Folder)
+    }
+
+    internal fun addNodeAt(node: BookmarkNode, pos: Int) {
+        element.addContent(pos, node.element)
     }
 
     internal fun addNode(node: BookmarkNode) {
@@ -99,7 +106,7 @@ class BookmarkDirectory(element: Element) : BookmarkNode(element) {
     }
 }
 
-class Bookmark(element: Element) : BookmarkNode(element) {
+class Bookmark(element: Element, parentDescriptor: NodeDescriptor<*>? = null) : BookmarkNode(element, parentDescriptor) {
     var url: String by element
 
     constructor(name: String, url: String) : this(Element(xmlSafeUUID())) {
@@ -127,6 +134,7 @@ interface BookmarkManager {
     fun removeBookmarkListener(listener: BookmarkListener)
 
     fun addNode(parent: BookmarkDirectory, node: BookmarkNode)
+    fun addNodeAt(parent: BookmarkDirectory, node: BookmarkNode, at: Int)
     fun removeNode(parent: BookmarkDirectory, node: BookmarkNode)
     fun updateNode(node: BookmarkNode)
 }
@@ -144,9 +152,7 @@ interface BookmarkListener {
 }
 
 @State(name = "bookmarks", storages = arrayOf(Storage("bookmark.xml")))
-class BookmarkManagerImpl(
-        val project: Project
-) : SimpleTreeStructure(), PersistentStateComponent<Element>, BookmarkManager {
+class BookmarkManagerImpl : SimpleTreeStructure(), PersistentStateComponent<Element>, BookmarkManager {
     val root = BookmarkDirectory("root", "root")
     private val myListeners: MutableList<BookmarkListener> = ContainerUtil.createLockFreeCopyOnWriteList()
 
@@ -173,6 +179,11 @@ class BookmarkManagerImpl(
 
     override fun addNode(parent: BookmarkDirectory, node: BookmarkNode) {
         parent.addNode(node)
+        myListeners.forEach { it.parentChanged(parent); it.itemAdded(parent, node) }
+    }
+
+    override fun addNodeAt(parent: BookmarkDirectory, node: BookmarkNode, at: Int) {
+        parent.addNodeAt(node, at)
         myListeners.forEach { it.parentChanged(parent); it.itemAdded(parent, node) }
     }
 

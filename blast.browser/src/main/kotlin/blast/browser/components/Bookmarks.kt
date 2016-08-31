@@ -3,11 +3,13 @@ package blast.browser.components
 import blast.browser.utils.actionButton
 import com.intellij.icons.AllIcons
 import com.intellij.ide.FileIconProvider
+import com.intellij.ide.dnd.DnDDragStartBean
+import com.intellij.ide.dnd.DnDEvent
+import com.intellij.ide.dnd.DnDSupport
 import com.intellij.ide.dnd.aware.DnDAwareTree
 import com.intellij.ide.util.treeView.AbstractTreeBuilder
 import com.intellij.ide.util.treeView.AbstractTreeStructure
 import com.intellij.ide.util.treeView.NodeRenderer
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -20,21 +22,18 @@ import com.intellij.ui.CommonActionsPanel
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.TreeSpeedSearch
-import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.awt.RelativeRectangle
 import com.intellij.ui.content.ContentFactory
-import com.intellij.ui.docking.DockContainer
-import com.intellij.ui.docking.DockManager
-import com.intellij.ui.docking.DockableContent
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.EditSourceOnDoubleClickHandler
 import com.intellij.util.EditSourceOnEnterKeyHandler
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.tree.TreeUtil
 import java.awt.BorderLayout
-import java.awt.Image
-import java.net.URL
-import javax.swing.*
+import javax.swing.Icon
+import javax.swing.JPanel
+import javax.swing.JTree
+import javax.swing.ToolTipManager
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
@@ -47,10 +46,10 @@ class BookmarkTreeBuilder(jtree: JTree,
     }
 }
 
-class BrowserOpener(private val url: String, private val project: Project) : Navigatable {
+class BrowserOpener(private val friendlyName: String, private val url: String, private val project: Project) : Navigatable {
     override fun navigate(requestFocus: Boolean) {
         val manager = FileEditorManager.getInstance(project)
-        val vf: URLVFNode = URLVFNode(URL(url), BrowserStorageVirtualFilesystem.instance)
+        val vf: URLVirtualFileNode = URLVirtualFileNode(friendlyName, url, BrowserStorageVirtualFilesystem.instance)
         manager.openFile(vf, true)
     }
 
@@ -63,10 +62,12 @@ interface BookmarkTreeModel {
     val treeBuilder: BookmarkTreeBuilder
 }
 
+
+// removed interface DockContainer
 class BookmarkTreeViewPanel(
         val project: Project,
         val bookmarkManager: BookmarkManagerImpl
-) : JPanel(BorderLayout()), DockContainer, DataProvider, BookmarkTreeModel, DataContext {
+) : JPanel(BorderLayout()), DataProvider, BookmarkTreeModel, DataContext {
     private val root = DefaultMutableTreeNode()
     private val treeModel: DefaultTreeModel
 
@@ -79,10 +80,8 @@ class BookmarkTreeViewPanel(
         treeModel = DefaultTreeModel(root)
         tree = DnDAwareTree(treeModel)
 
-        DockManager.getInstance(project).register(this)
-
         treeBuilder = BookmarkTreeBuilder(tree, treeModel, bookmarkManager)
-
+//        DockManager.getInstance(project).register(this)
 
         TreeUtil.installActions(tree)
         UIUtil.setLineStyleAngled(tree)
@@ -96,8 +95,12 @@ class BookmarkTreeViewPanel(
 
         tree.cellRenderer = object : NodeRenderer() {}
 
+
         EditSourceOnDoubleClickHandler.install(tree)
-        EditSourceOnEnterKeyHandler.install(tree)
+        // use the Runnable variant below this will request focus.
+        EditSourceOnEnterKeyHandler.install(tree) {}
+
+
 
         val decorator = ToolbarDecorator
                 .createDecorator(tree)
@@ -154,67 +157,94 @@ class BookmarkTreeViewPanel(
             }
         })
 
-
+        setupDND(tree)
     }
 
+    fun setupDND(tree: DnDAwareTree) {
+        DnDSupport.createBuilder(tree)
+                .setBeanProvider {
+                    val path = tree.getPathForLocation(it.point.x, it.point.y)
+                    if (path != null) {
+                        DnDDragStartBean(path)
+                    } else {
+                        object : DnDDragStartBean("") {
+                            override fun isEmpty(): Boolean = true
+                        }
+                    }
+                }
+                .setTargetChecker {
+                    val path = tree.getPathForLocation(it.point.x, it.point.y)
 
-    override fun add(content: DockableContent<*>, dropTarget: RelativePoint?) {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+                    if (path == null) {
+                        it.isDropPossible = false
+                        false
+                    } else if (tree.selectionCount > 1) {
+                        it.isDropPossible = false
+                        false
+                    } else {
+                        val targetNode = (path.lastPathComponent as DefaultMutableTreeNode).userObject as BookmarkNode
+                        val bounds = tree.getPathBounds(path)
 
-    override fun closeAll() {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+                        val sourceObject = (((it.attachedObject as TreePath).lastPathComponent) as DefaultMutableTreeNode).userObject as BookmarkNode
 
-    override fun isDisposeWhenEmpty(): Boolean {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+                        if (sourceObject == targetNode) {
+                            it.isDropPossible = false
+                            false
+                        } else {
+                            it.isDropPossible = true
+                            if (bounds != null) {
+                                if (targetNode is BookmarkDirectory)
+                                    it.setHighlighting(RelativeRectangle(tree, bounds), DnDEvent.DropTargetHighlightingType.RECTANGLE)
+                                else {
+                                    val below = it.getPoint().y >= bounds.y + bounds.height / 2
+                                    if (below) {
+                                        if (sourceObject.parent == targetNode.parent && sourceObject.index == targetNode.index + 1) it.isDropPossible = false
+                                        println("below")
+                                        bounds.y += bounds.height - 2
+                                    } else {
+                                        if (sourceObject.parent == targetNode.parent && sourceObject.index == targetNode.index - 1)
+                                            it.isDropPossible = false
+                                    }
 
-    override fun isEmpty(): Boolean {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+                                    bounds.height = 2
+                                    it.setHighlighting(RelativeRectangle(tree, bounds), DnDEvent.DropTargetHighlightingType.RECTANGLE)
+                                }
+                            }
+                            false
+                        }
+                    }
+                }
+                .setDropHandler {
+                    val path = tree.getPathForLocation(it.point.x, it.point.y)
+                    val sourceObject = (((it.attachedObject as TreePath).lastPathComponent) as DefaultMutableTreeNode).userObject as BookmarkNode
+                    val targetObject = (path.lastPathComponent as DefaultMutableTreeNode).userObject as BookmarkNode
 
-    override fun getContainerComponent(): JComponent = this
+                    if (targetObject is BookmarkDirectory) {
+                        bookmarkManager.removeNode((sourceObject.parent as BookmarkDirectory), sourceObject)
+                        bookmarkManager.addNode(targetObject, sourceObject)
+                    } else if (targetObject is Bookmark) {
+                        val sourceParent = (sourceObject.parent as BookmarkDirectory)
+                        val targetParent = (targetObject.parent as BookmarkDirectory)
+                        val sourceObjectIndex = sourceObject.index
+                        val targetObjectIndex = targetObject.index
+
+                        val areSiblings = sourceParent == targetParent
+
+                        bookmarkManager.removeNode(sourceParent, sourceObject)
+                        val b = tree.getPathBounds(path)
+                        val below = it.getPoint().y >= b.y + b.height / 2
 
 
-    override fun addListener(listener: DockContainer.Listener?, parent: Disposable?) {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
 
-    override fun getAcceptAreaFallback(): RelativeRectangle {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun processDropOver(content: DockableContent<*>, point: RelativePoint?): Image {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun getAcceptArea(): RelativeRectangle {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun getContentResponse(content: DockableContent<*>, point: RelativePoint?): DockContainer.ContentResponse {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun resetDropOver(content: DockableContent<*>) {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun startDropOver(content: DockableContent<*>, point: RelativePoint?): Image {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun dispose() {
-
-    }
-
-    override fun hideNotify() {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun showNotify() {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+                        if (below) // below means higher index !
+                            bookmarkManager.addNodeAt(targetParent, sourceObject, targetObjectIndex)
+                        else {
+                            if (areSiblings && sourceObject.index < targetObject.index)
+                                bookmarkManager.addNodeAt(targetParent, sourceObject, targetObjectIndex - 1)
+                        }
+                    }
+                }
+                .install()
     }
 
     override fun getData(dataId: String): Any? {
@@ -224,7 +254,7 @@ class BookmarkTreeViewPanel(
                 if (res.size == 1) {
                     val tp: TreePath = res[0]
                     val uo = (tp.lastPathComponent as DefaultMutableTreeNode).userObject
-                    when (uo) { is Bookmark -> return BrowserOpener(uo.url, project)
+                    when (uo) { is Bookmark -> return BrowserOpener(uo.displayName, uo.url, project)
                     }
                 }
             }
@@ -233,11 +263,6 @@ class BookmarkTreeViewPanel(
             else -> return null
         }
         return null
-
-//        if (CommonDataKeys.NAVIGATABLE_ARRAY.`is`(dataId)) {
-//            val selectedElements = getSelectedElements<Navigatable>(Navigatable::class.java)
-//            return if (selectedElements.isEmpty()) null else selectedElements.toTypedArray()
-//        }
     }
 }
 
@@ -250,14 +275,9 @@ class BookmarkTreeViewToolWindow : ToolWindowFactory {
     }
 }
 
-class Monkey: FileIconProvider {
+class BrowserFileIconProvider : FileIconProvider {
     override fun getIcon(file: VirtualFile, flags: Int, project: Project?): Icon? {
-        if ((file as? URLVFNode) != null) return AllIcons.General.Web
+        if ((file as? URLVirtualFileNode) != null) return AllIcons.General.Web
         else return null
     }
 }
-
-
-
-
-
