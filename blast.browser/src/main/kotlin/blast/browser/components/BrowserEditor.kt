@@ -2,6 +2,8 @@ package blast.browser.components
 
 import blast.browser.utils.inSwingThread
 import com.intellij.codeHighlighting.BackgroundEditorHighlighter
+import com.intellij.icons.AllIcons
+import com.intellij.ide.FileIconProvider
 import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
@@ -21,10 +23,7 @@ import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.beans.PropertyChangeListener
 import java.util.logging.Level
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.SwingUtilities
+import javax.swing.*
 
 abstract class BaseBrowserEditor : UserDataHolderBase(), FileEditor, DataProvider {
     override fun getBackgroundHighlighter(): BackgroundEditorHighlighter? = null
@@ -50,6 +49,13 @@ abstract class BaseBrowserEditor : UserDataHolderBase(), FileEditor, DataProvide
     }
 
     override fun removePropertyChangeListener(p0: PropertyChangeListener) {
+    }
+}
+
+class BrowserFileIconProvider : FileIconProvider {
+    override fun getIcon(file: VirtualFile, flags: Int, project: Project?): Icon? {
+        if ((file as? URLVirtualFileNode) != null) return AllIcons.General.Web
+        else return null
     }
 }
 
@@ -167,11 +173,10 @@ class BrowserEditorState(val title: String, val url: String) : FileEditorState {
 
 class BrowserEditorProvider : FileEditorProvider, DumbAware {
     init {
-        // todo move to a component initializer
-        LoggerProvider.getBrowserLogger().setLevel(Level.WARNING);
-        LoggerProvider.getIPCLogger().setLevel(Level.SEVERE);
-        LoggerProvider.getChromiumProcessLogger().setLevel(Level.SEVERE);
-//        BrowserPreferences.setChromiumSwitches("--overscroll-history-navigation=1");
+        // todo move to a component initializer : not so bad since it is a singleton
+        LoggerProvider.getBrowserLogger().level = Level.WARNING
+        LoggerProvider.getIPCLogger().level = Level.SEVERE
+        LoggerProvider.getChromiumProcessLogger().level = Level.SEVERE
     }
 
     override fun getEditorTypeId(): String = "blast.browser.editor"

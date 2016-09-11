@@ -8,10 +8,8 @@ import com.intellij.ide.projectView.PresentationData
 import com.intellij.ide.util.treeView.NodeDescriptor
 import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.components.PersistentStateComponent
-import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
-import com.intellij.openapi.project.Project
 import com.intellij.ui.treeStructure.SimpleNode
 import com.intellij.ui.treeStructure.SimpleTreeStructure
 import com.intellij.ui.treeStructure.Tree
@@ -22,8 +20,7 @@ import kotlin.comparisons.compareValuesBy
 
 object BlastBrowser {
     object DataKeys {
-        val TARGET_TREE = DataKey.create<Tree>("targetBookmarkTree")
-        val BROWSER_EDITOR = DataKey.create<BaseBrowserEditor>("sourceBrowserEditor")
+        val TARGET_TREE: DataKey<Tree> = DataKey.create<Tree>("targetBookmarkTree")
     }
 }
 
@@ -57,7 +54,7 @@ abstract class BookmarkNode(internal var element: Element, val p: NodeDescriptor
     }
 
     override fun treePath(): TreePath {
-        val path = mutableListOf<BookmarkNode>(this)
+        val path = mutableListOf(this)
 
         var currentNode: BookmarkNode = this
 
@@ -79,7 +76,7 @@ class BookmarkDirectory(element: Element, parentDescriptor: NodeDescriptor<*>? =
     override fun type(): String = "directory"
     override fun isAlwaysLeaf(): Boolean = false
 
-    override fun getChildren(): Array<out BookmarkNode> = element.getChildren().map {
+    override fun getChildren(): Array<out BookmarkNode> = element.children.map {
         val type: String = it.getAttribute("type").value
         when (type) {
             "directory" -> BookmarkDirectory(it, this)
@@ -126,10 +123,6 @@ class Bookmark(element: Element, parentDescriptor: NodeDescriptor<*>? = null) : 
 }
 
 interface BookmarkManager {
-    companion object {
-        fun instance(project: Project) = ServiceManager.getService(BookmarkManager::class.java)
-    }
-
     fun addBookmarkListener(listener: BookmarkListener)
     fun removeBookmarkListener(listener: BookmarkListener)
 
@@ -163,12 +156,11 @@ class BookmarkManagerImpl : SimpleTreeStructure(), PersistentStateComponent<Elem
     override fun addBookmarkListener(listener: BookmarkListener) {
         // FIXTURES
         if (root.element.contentSize == 0) {
+            root.addNode(Bookmark("Google", "http://www.google.com"))
+
             val f = BookmarkDirectory("Programming", "programming")
-            f.addNode(Bookmark("Slashdot", "http://www.slashdot.com"))
-            f.addNode(Bookmark("Macrumors", "http://www.macrumors.com"))
             f.addNode(Bookmark("Stackoverflow", "http://www.stackoverflow.com"))
-            f.addNode(Bookmark("Google", "http://www.google.com"))
-            f.addNode(Bookmark("Basecamp", "http://www.basecamp.com"))
+
             root.addNode(f)
         }
         myListeners.add(listener)

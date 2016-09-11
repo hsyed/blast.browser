@@ -1,8 +1,6 @@
 package blast.browser.components
 
 import blast.browser.utils.actionButton
-import com.intellij.icons.AllIcons
-import com.intellij.ide.FileIconProvider
 import com.intellij.ide.dnd.DnDDragStartBean
 import com.intellij.ide.dnd.DnDEvent
 import com.intellij.ide.dnd.DnDSupport
@@ -14,9 +12,9 @@ import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.openapi.wm.ex.ToolWindowEx
 import com.intellij.pom.Navigatable
 import com.intellij.ui.CommonActionsPanel
 import com.intellij.ui.IdeBorderFactory
@@ -24,13 +22,11 @@ import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.TreeSpeedSearch
 import com.intellij.ui.awt.RelativeRectangle
 import com.intellij.ui.content.ContentFactory
-import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.EditSourceOnDoubleClickHandler
 import com.intellij.util.EditSourceOnEnterKeyHandler
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.tree.TreeUtil
 import java.awt.BorderLayout
-import javax.swing.Icon
 import javax.swing.JPanel
 import javax.swing.JTree
 import javax.swing.ToolTipManager
@@ -40,11 +36,7 @@ import javax.swing.tree.TreePath
 
 class BookmarkTreeBuilder(jtree: JTree,
                           treeModel: DefaultTreeModel,
-                          treeBase: AbstractTreeStructure) : AbstractTreeBuilder(jtree, treeModel, treeBase, null) {
-    init {
-
-    }
-}
+                          treeBase: AbstractTreeStructure) : AbstractTreeBuilder(jtree, treeModel, treeBase, null)
 
 class BrowserOpener(private val friendlyName: String, private val url: String, private val project: Project) : Navigatable {
     override fun navigate(requestFocus: Boolean) {
@@ -57,26 +49,21 @@ class BrowserOpener(private val friendlyName: String, private val url: String, p
     override fun canNavigateToSource(): Boolean = true
 }
 
-interface BookmarkTreeModel {
-    val tree: Tree
-    val treeBuilder: BookmarkTreeBuilder
-}
-
-
 // removed interface DockContainer
 class BookmarkTreeViewPanel(
         val project: Project,
-        val bookmarkManager: BookmarkManagerImpl
-) : JPanel(BorderLayout()), DataProvider, BookmarkTreeModel, DataContext {
+        val bookmarkManager: BookmarkManagerImpl,
+        toolWindowEx: ToolWindowEx
+) : JPanel(BorderLayout()), DataProvider, DataContext {
     private val root = DefaultMutableTreeNode()
     private val treeModel: DefaultTreeModel
 
-    override val tree: DnDAwareTree
-    override val treeBuilder: BookmarkTreeBuilder
+    val tree: DnDAwareTree
+    val treeBuilder: BookmarkTreeBuilder
 
 
     init {
-        root.setUserObject(bookmarkManager.rootElement)
+        root.userObject = bookmarkManager.rootElement
         treeModel = DefaultTreeModel(root)
         tree = DnDAwareTree(treeModel)
 
@@ -85,7 +72,7 @@ class BookmarkTreeViewPanel(
 
         TreeUtil.installActions(tree)
         UIUtil.setLineStyleAngled(tree)
-        tree.isRootVisible = true // TODO change
+        tree.isRootVisible = true
         tree.showsRootHandles = true
         tree.isLargeModel = true
 
@@ -132,6 +119,19 @@ class BookmarkTreeViewPanel(
         panel.border = IdeBorderFactory.createEmptyBorder()
         add(panel, BorderLayout.CENTER)
         border = IdeBorderFactory.createEmptyBorder()
+
+
+
+//        val additionalToolwindowGearActions = DefaultActionGroup()
+//        additionalToolwindowGearActions.add(object: AnAction("show roots") {
+//            override fun actionPerformed(e: AnActionEvent?) {
+//
+//            }
+//        })
+
+        toolWindowEx.setAdditionalGearActions(object:DefaultActionGroup() {
+
+        })
 
         bookmarkManager.addBookmarkListener(object : BookmarkListener {
             override fun itemUpdated(node: BookmarkNode) {
@@ -196,7 +196,7 @@ class BookmarkTreeViewPanel(
                                 if (targetNode is BookmarkDirectory)
                                     it.setHighlighting(RelativeRectangle(tree, bounds), DnDEvent.DropTargetHighlightingType.RECTANGLE)
                                 else {
-                                    val below = it.getPoint().y >= bounds.y + bounds.height / 2
+                                    val below = it.point.y >= bounds.y + bounds.height / 2
                                     if (below) {
                                         if (sourceObject.parent == targetNode.parent && sourceObject.index == targetNode.index + 1) it.isDropPossible = false
                                         println("below")
@@ -225,14 +225,13 @@ class BookmarkTreeViewPanel(
                     } else if (targetObject is Bookmark) {
                         val sourceParent = (sourceObject.parent as BookmarkDirectory)
                         val targetParent = (targetObject.parent as BookmarkDirectory)
-                        val sourceObjectIndex = sourceObject.index
                         val targetObjectIndex = targetObject.index
 
                         val areSiblings = sourceParent == targetParent
 
                         bookmarkManager.removeNode(sourceParent, sourceObject)
                         val b = tree.getPathBounds(path)
-                        val below = it.getPoint().y >= b.y + b.height / 2
+                        val below = it.point.y >= b.y + b.height / 2
 
 
 
@@ -269,15 +268,10 @@ class BookmarkTreeViewPanel(
 class BookmarkTreeViewToolWindow : ToolWindowFactory {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val bookmarkManager = ServiceManager.getService(project, BookmarkManagerImpl::class.java)
-        val panel = BookmarkTreeViewPanel(project, bookmarkManager)
+        val panel = BookmarkTreeViewPanel(project, bookmarkManager, toolWindow as ToolWindowEx)
         val content = ContentFactory.SERVICE.getInstance().createContent(panel, "browser", false)
         toolWindow.contentManager.addContent(content)
-    }
-}
 
-class BrowserFileIconProvider : FileIconProvider {
-    override fun getIcon(file: VirtualFile, flags: Int, project: Project?): Icon? {
-        if ((file as? URLVirtualFileNode) != null) return AllIcons.General.Web
-        else return null
+
     }
 }

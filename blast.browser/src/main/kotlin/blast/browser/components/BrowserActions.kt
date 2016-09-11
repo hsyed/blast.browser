@@ -99,10 +99,10 @@ class AddNewBrowserBookmarkGroupActionButton() : BrowserBookmarkAction() {
 }
 
 class AddBMAction() : BrowserBookmarkAction() {
-    override fun doAction(bm: BookmarkManager, project: Project, nodes: Array<DefaultMutableTreeNode>) {
+    override fun doAction(bookmarkManager: BookmarkManager, project: Project, nodes: Array<DefaultMutableTreeNode>) {
         val targetDirectory = nodes[0].userObject as BookmarkDirectory
         val addedBookmark = BookmarkEntryDialogue(project, "Add new bookmark in ${targetDirectory.displayName}").acquire()
-        if (addedBookmark != null) bm.addNode(targetDirectory, addedBookmark)
+        if (addedBookmark != null) bookmarkManager.addNode(targetDirectory, addedBookmark)
     }
 
     override fun doUpdateButton(e: AnActionEvent, node: DefaultMutableTreeNode) {
@@ -112,7 +112,7 @@ class AddBMAction() : BrowserBookmarkAction() {
 }
 
 class AddBMDAction() : BrowserBookmarkAction() {
-    override fun doAction(bm: BookmarkManager, project: Project, nodes: Array<DefaultMutableTreeNode>) {
+    override fun doAction(bookmarkManager: BookmarkManager, project: Project, nodes: Array<DefaultMutableTreeNode>) {
         val targetDirectory = nodes[0].userObject as BookmarkDirectory
 
         val name = Messages.showInputDialog(project,
@@ -121,7 +121,7 @@ class AddBMDAction() : BrowserBookmarkAction() {
                 null)
 
         if (!name.isNullOrEmpty()) {
-            bm.addNode(targetDirectory, BookmarkDirectory(name!!, xmlSafeUUID()))
+            bookmarkManager.addNode(targetDirectory, BookmarkDirectory(name!!, xmlSafeUUID()))
         }
     }
 
@@ -155,9 +155,18 @@ class EditBookmarkNodeEntryAction() : BrowserBookmarkAction() {
 class DeleteSelectedBookmarkAction() : BrowserBookmarkAction() {
     override fun doAction(bookmarkManager: BookmarkManager, project: Project, nodes: Array<DefaultMutableTreeNode>) {
         nodes.forEach {
-            val parentNode = (it.parent as DefaultMutableTreeNode)
-            val parentDirectory = parentNode.userObject as BookmarkDirectory
-            bookmarkManager.removeNode(parentDirectory, it.userObject as BookmarkNode)
+            if(!it.isRoot) {
+                val parentNode = (it.parent as DefaultMutableTreeNode)
+                val parentDirectory = parentNode.userObject as BookmarkDirectory
+                val itNode = it.userObject as BookmarkNode
+
+                if (Messages.showYesNoDialog(project,
+                        "Are you sure you want to delete ${itNode.type()} ${itNode.displayName}?",
+                        "Delete Bookmark Directory",
+                        null) == Messages.YES) {
+                    bookmarkManager.removeNode(parentDirectory, it.userObject as BookmarkNode)
+                }
+            }
         }
     }
 }
